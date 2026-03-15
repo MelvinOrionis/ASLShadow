@@ -1,20 +1,15 @@
 import os
 import io
 import pygame
-import pyttsx3 # Install this: pip install pyttsx3
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
 load_dotenv()
 
-# SET THIS TO FALSE TO SAVE CREDITS DURING TESTING
-USE_ELEVENLABS = False 
+# --- THE FIX: Set this to True for the high-quality voice ---
+USE_ELEVENLABS = True 
 
-engine = pyttsx3.init()
-elevenlabs = None
-if USE_ELEVENLABS:
-    elevenlabs = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
-
+elevenlabs = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 pygame.mixer.init()
 
 def speak(text: str) -> None:
@@ -22,15 +17,17 @@ def speak(text: str) -> None:
     print(f"Shadow speaking: {text}")
 
     if not USE_ELEVENLABS:
-        # USE FREE SYSTEM VOICE
+        # Fallback to system voice if needed
+        import pyttsx3
+        engine = pyttsx3.init()
         engine.say(text)
         engine.runAndWait()
     else:
-        # USE ELEVENLABS
         try:
+            # This uses the "good" voice from your .env
             audio = elevenlabs.text_to_speech.convert(
                 text=text,
-                voice_id=os.getenv("ELEVENLABS_VOICE_ID"),
+                voice_id=os.getenv("ELEVENLABS_VOICE_ID"), 
                 model_id="eleven_flash_v2_5"
             )
             audio_data = b"".join(audio)
@@ -39,4 +36,8 @@ def speak(text: str) -> None:
             while pygame.mixer.music.get_busy():
                 pygame.time.Clock().tick(10)
         except Exception as e:
-            print(f"ElevenLabs Error: {e}")
+            print(f"ElevenLabs Error: {e}. Falling back to system voice.")
+            import pyttsx3
+            engine = pyttsx3.init()
+            engine.say(text)
+            engine.runAndWait()
